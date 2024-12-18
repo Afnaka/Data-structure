@@ -1,0 +1,246 @@
+#include <stdio.h>
+#include <stdlib.h>
+#include <stdbool.h>
+
+#define MAX_VERTICES 10
+
+// Graph representation using adjacency list
+typedef struct Node {
+    int vertex;
+    struct Node* next;
+} Node;
+
+typedef struct Graph {
+    Node* adjList[MAX_VERTICES];
+    int numVertices;
+} Graph;
+
+// Function prototypes
+void initGraph(Graph* g, int vertices);
+void addEdge(Graph* g, int start, int end);
+void printGraph(Graph* g);
+void DFS(Graph* g, int start, bool visited[]);
+void BFS(Graph* g, int start);
+void topologicalSort(Graph* g);
+
+// Helper functions for DFS and BFS
+void dfsUtil(Graph* g, int vertex, bool visited[], int* result, int* idx);
+void bfsUtil(Graph* g, int start);
+
+// Stack for Topological Sort
+void topologicalSortUtil(Graph* g, int vertex, bool visited[], int* stack, int* index);
+void topologicalSortHelper(Graph* g);
+
+// Function to display menu
+void displayMenu();
+
+// Main function
+int main() {
+    Graph g;
+    int choice, vertices, edges, start, end;
+
+    // Initialize graph
+    g.numVertices = 0;
+
+    while (1) {
+        displayMenu();
+        printf("Enter your choice: ");
+        scanf("%d", &choice);
+
+        switch (choice) {
+            case 1:
+                // Input graph data
+                printf("Enter the number of vertices: ");
+                scanf("%d", &vertices);
+                g.numVertices = vertices;
+
+                initGraph(&g, vertices);
+
+                printf("Enter the number of edges: ");
+                scanf("%d", &edges);
+
+                for (int i = 0; i < edges; i++) {
+                    printf("Enter edge %d (start vertex, end vertex): ", i + 1);
+                    scanf("%d %d", &start, &end);
+                    addEdge(&g, start, end);
+                }
+                printf("Graph has been created.\n");
+                break;
+
+            case 2:
+                // DFS Traversal
+                if (g.numVertices > 0) {
+                    printf("Enter the start vertex for DFS: ");
+                    scanf("%d", &start);
+                    bool visited[MAX_VERTICES] = {false};
+                    printf("DFS Traversal starting from vertex %d: ", start);
+                    DFS(&g, start, visited);
+                    printf("\n");
+                } else {
+                    printf("Graph is not initialized. Please create a graph first.\n");
+                }
+                break;
+
+            case 3:
+                // BFS Traversal
+                if (g.numVertices > 0) {
+                    printf("Enter the start vertex for BFS: ");
+                    scanf("%d", &start);
+                    printf("BFS Traversal starting from vertex %d: ", start);
+                    BFS(&g, start);
+                } else {
+                    printf("Graph is not initialized. Please create a graph first.\n");
+                }
+                break;
+
+            case 4:
+                
+                if (g.numVertices > 0) {
+                    printf("Topological Sort:\n");
+                    topologicalSort(&g);
+                } else {
+                    printf("Graph is not initialized. Please create a graph first.\n");
+                }
+                break;
+
+            case 5:
+                
+                printf("Exiting program...\n");
+                exit(0);
+
+            default:
+                printf("Invalid choice. Please try again.\n");
+        }
+    }
+
+    return 0;
+}
+
+// Initialize the graph with the number of vertices
+void initGraph(Graph* g, int vertices) {
+    g->numVertices = vertices;
+    for (int i = 0; i < vertices; i++) {
+        g->adjList[i] = NULL;
+    }
+}
+
+// Add an edge to the graph
+void addEdge(Graph* g, int start, int end) {
+    Node* newNode = (Node*)malloc(sizeof(Node));
+    newNode->vertex = end;
+    newNode->next = g->adjList[start];
+    g->adjList[start] = newNode;
+}
+
+// Print the graph
+void printGraph(Graph* g) {
+    for (int i = 0; i < g->numVertices; i++) {
+        printf("Vertex %d:", i);
+        Node* temp = g->adjList[i];
+        while (temp) {
+            printf(" %d", temp->vertex);
+            temp = temp->next;
+        }
+        printf("\n");
+    }
+}
+
+// DFS traversal using recursion
+void DFS(Graph* g, int start, bool visited[]) {
+    visited[start] = true;
+    printf("%d ", start);
+
+    Node* temp = g->adjList[start];
+    while (temp) {
+        if (!visited[temp->vertex]) {
+            DFS(g, temp->vertex, visited);
+        }
+        temp = temp->next;
+    }
+}
+
+// BFS traversal using queue
+void BFS(Graph* g, int start) {
+    bool visited[MAX_VERTICES] = {false};
+    int queue[MAX_VERTICES];
+    int front = 0, rear = 0;
+
+    visited[start] = true;
+    queue[rear++] = start;
+
+    while (front < rear) {
+        int currentVertex = queue[front++];
+        printf("%d ", currentVertex);
+
+        Node* temp = g->adjList[currentVertex];
+        while (temp) {
+            if (!visited[temp->vertex]) {
+                visited[temp->vertex] = true;
+                queue[rear++] = temp->vertex;
+            }
+            temp = temp->next;
+        }
+    }
+    printf("\n");
+}
+
+// Helper function for DFS to manage the traversal order
+void dfsUtil(Graph* g, int vertex, bool visited[], int* result, int* idx) {
+    visited[vertex] = true;
+    result[*idx] = vertex;
+    (*idx)++;
+
+    Node* temp = g->adjList[vertex];
+    while (temp) {
+        if (!visited[temp->vertex]) {
+            dfsUtil(g, temp->vertex, visited, result, idx);
+        }
+        temp = temp->next;
+    }
+}
+
+// Topological Sorting using DFS
+void topologicalSort(Graph* g) {
+    bool visited[MAX_VERTICES] = {false};
+    int stack[MAX_VERTICES];
+    int idx = 0;
+
+    // Perform DFS for each unvisited node
+    for (int i = 0; i < g->numVertices; i++) {
+        if (!visited[i]) {
+            topologicalSortUtil(g, i, visited, stack, &idx);
+        }
+    }
+
+    printf("Topological Sort Order: ");
+    for (int i = idx - 1; i >= 0; i--) {
+        printf("%d ", stack[i]);
+    }
+    printf("\n");
+}
+
+// Utility function for topological sort using DFS
+void topologicalSortUtil(Graph* g, int vertex, bool visited[], int* stack, int* index) {
+    visited[vertex] = true;
+
+    Node* temp = g->adjList[vertex];
+    while (temp) {
+        if (!visited[temp->vertex]) {
+            topologicalSortUtil(g, temp->vertex, visited, stack, index);
+        }
+        temp = temp->next;
+    }
+
+    stack[*index] = vertex;
+    (*index)++;
+}
+
+// Function to display the menu
+void displayMenu() {
+    printf("\nMenu:\n");
+    printf("1. Create Graph\n");
+    printf("2. Perform DFS Traversal\n");
+    printf("3. Perform BFS Traversal\n");
+    printf("4. Perform Topological Sort\n");
+    printf("5. Exit\n");
+}
